@@ -1,7 +1,7 @@
 {
-  "name": "nodejs-sandbox",
-  "version": "1.0.0",
-  "description": "",
+  "name": "nagu-owl",
+  "version": "1.3.1",
+  "description": "[![Node.js CI](https://github.com/nagucc/owl/actions/workflows/node.js.yml/badge.svg)](https://github.com/nagucc/owl/actions/workflows/node.js.yml)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -16,16 +16,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/liudonghua123/esm-template.git"
+    "url": "git+https://github.com/nagucc/owl.git"
   },
   "keywords": [],
   "author": "Ives van Hoorne",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/liudonghua123/esm-template/issues"
+    "url": "https://github.com/nagucc/owl/issues"
   },
-  "homepage": "https://github.com/liudonghua123/esm-template#readme",
+  "homepage": "https://github.com/nagucc/owl#readme",
   "devDependencies": {
+    "@types/mocha": "^10.0.6",
     "eslint": "^7.32.0 || ^8.2.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.25.2",
@@ -39,6 +40,10 @@
     "commander": "^12.0.0",
     "figlet": "^1.7.0",
     "inquirer": "^9.2.15",
+    "nagu-triples": "^1.3.1",
     "ora": "^8.0.1"
+  },
+  "directories": {
+    "test": "test"
   }
 }
