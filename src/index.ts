@@ -6,9 +6,11 @@
  */
 
 import triples from 'nagu-triples';
+import { Notion } from 'nagu-triples/dist/notions';
+import { Triple } from 'nagu-triples/dist/triples';
 
 const rdfPrefix = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-const rdf = {
+export const rdf = {
   type: `${rdfPrefix}type`,
   Property: `${rdfPrefix}Property`,
   Statement: `${rdfPrefix}Statement`,
@@ -47,23 +49,27 @@ export const rdfs = {
   member: `${rdfsPrefix}member`,
 }
 
+export interface IRdfsClass {
+  instances(): Promise<Array<RdfsResource>>;
+}
 export class Factory {
+  options: any;
   constructor(options) {
     this.options = options;
   }
-  async createRdfResource (uri) {
+  async createRdfResource (uri: Notion<string>|string, forceInit: boolean = true) {
     const res = new RdfsResource(uri, this.options);
-    await res.init();
+    if (forceInit) await res.init();
     return res;
   }
-  async createRdfProperty (uri) {
+  async createRdfProperty (uri: Notion<string>|string, forceInit: boolean = true) {
     const res = new RdfProperty(uri, this.options);
-    await res.init();
+    if (forceInit) await res.init();
     return res;
   }
-  async createRdfsClass(uri) {
+  async createRdfsClass(uri: Notion<string>|string, forceInit: boolean = true) {
     const res = new RdfsClass(uri, this.options);
-    await res.init();
+    if (forceInit) await res.init();
     return res;
   }
   async init () {
@@ -150,26 +156,31 @@ export class Factory {
  * RDF Resource, rdf:Resource 表示RDF中被描述的资源
  * - 应专注于对"属性"的管理，而非属性值(当下最重要的是实现功能！！)
  */
-class RdfsResource {
-  constructor (uri, options) {
-    this.uri = uri.toString();
+export class RdfsResource extends Notion<string> {
+  public uri: string;
+  options: any;
+  properties: any[];
+  constructor (public iri: Notion<string>|string, options) {
+    super(iri.toString());
+    this.iri = iri;
+    this.uri = iri.toString();
     this.options = options;
     this.properties = [];
   }
   
-  async getPropertyValues(property) {
+  async getPropertyValues(property: RdfProperty | string): Promise<Array<RdfsResource>> {
     // 获取指定属性的所有值
     if (!(property instanceof RdfProperty)) property = new RdfProperty(property, this.options);
     // 1. 判断给定property是不是属性
     if (!(await property.check())) throw new Error(`${property}违反 RDF axioms 2, 无法获取值`);
 
     // 2. 获取所有值
-    const result = (await triples.listBySP(this, property, this.options)).map(s => new RdfsResource(s.object.name));
-    this.properties[property] = result;
+    const result = (await triples.listBySP(this.iri, property, this.options)).map(s => new RdfsResource(s.object.name, this.options));
+    this.properties[property.toString()] = result;
     return result;
   }
 
-  async setPropertyValue(property, value) {
+  async setPropertyValue(property: RdfProperty|string, value: string | Notion<any>): Promise<Triple> {
     if (!(property instanceof RdfProperty)) property = new RdfProperty(property, this.options);
     // 1. 检查property
     if (!(await property.check())) throw new Error(`${property} 不是 rdf:Property, 不能设置属性值`);
@@ -178,7 +189,7 @@ class RdfsResource {
     return triples.getOrCreate(this, property, value, this.options);
   }
 
-  async removePropertyValue(property, value) {
+  async removePropertyValue(property: string | RdfProperty, value: string | Notion<any>): Promise<number> {
     // 删除属性的值
     if (!(property instanceof RdfProperty)) property = new RdfProperty(property, this.options);
     // 1. 检查property
@@ -218,7 +229,10 @@ class RdfsResource {
   }
 }
 
-class RdfsClass extends RdfsResource {
+export class RdfsClass extends RdfsResource implements IRdfsClass {
+  instances(): Promise<RdfsResource[]> {
+    throw new Error('Method not implemented.');
+  }
   async init() {
     await this.setPropertyValue(rdf.type, rdfs.Class);
   }
@@ -227,27 +241,31 @@ class RdfsClass extends RdfsResource {
   }
 }
 
-class RdfProperty extends RdfsResource {
-  constructor (uri, options) {
+export class RdfProperty extends RdfsResource implements IRdfsClass {
+  constructor (uri: Notion<any>|string, options) {
     super(uri, options)
   }
+  async instances(): Promise<RdfsResource[]> {
+    const result = await triples.listByPO(rdf.type, rdf.Property, this.options);
+    return result.map(t => new RdfsResource(t.subject, this.options));
+  }
   async domians() {
-    return this.getPropertyValues(RDFS.terms.domain);
+    return this.getPropertyValues(rdfs.domain);
   }
   async addDomain(resource) {
-    return this.setPropertyValue(RDFS.terms.domain, resource);
+    return this.setPropertyValue(rdfs.domain, resource);
   }
   async removeDomain(resource) {
-    return this.removePropertyValue(RDFS.terms.domain, resource);
+    return this.removePropertyValue(rdfs.domain, resource);
   }
   async ranges() {
-    return this.getPropertyValues(RDFS.terms.range);
+    return this.getPropertyValues(rdfs.range);
   }
   async addRange(resource) {
-    return this.setPropertyValue(RDFS.terms.range, resource);
+    return this.setPropertyValue(rdfs.range, resource);
   }
   async removeRange(resource) {
-    return this.removePropertyValue(RDFS.terms.range, resource);
+    return this.removePropertyValue(rdfs.range, resource);
   }
   async init() {
     // RDF axioms 2. 设置rdf:type 为rdf:Property
@@ -257,11 +275,10 @@ class RdfProperty extends RdfsResource {
     await this.removePropertyValue(rdf.type, rdf.Property);
   }
   // 检查当前对象是否是Property
-  async check() {
-    // @ts-ignore
-    if (this == rdf.type) return true; // RDF axioms 1
+  async check(): Promise<boolean> {
+    if (this.toString() == rdf.type) return true; // RDF axioms 1
     const res = await this.getPropertyValues(rdf.type);
-    return res.some(o => o == rdf.Property);
+    return res.some(o => o.toString() == rdf.Property);
   }
 }
 

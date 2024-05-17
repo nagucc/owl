@@ -36,3 +36,4 @@ describe('RdfProperty 类', () => {
     assert.equal(res, false);
   })
 });
+

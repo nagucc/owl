@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "ES6", // 或 "ES2015", "ESNext"
+    "target": "ES6", // 或 "ES2015", "ESNext"
+    "moduleResolution": "node",
+    "declaration": true, // 如果需要发布声明文件
+    "outDir": "./dist", // 输出目录
+    // 其他选项...
+  },
+  "include": ["src/**/*"], // 指定要包含的文件
+  "exclude": ["node_modules", "dist"] // 指定要排除的文件
+}
