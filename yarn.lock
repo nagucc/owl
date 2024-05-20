@@ -1516,10 +1516,10 @@ mysql2@^3.9.7:
     seq-queue "^0.0.5"
     sqlstring "^2.3.2"
 
-nagu-triples@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.npmjs.org/nagu-triples/-/nagu-triples-2.0.1.tgz"
-  integrity sha512-V7yvkw3zjfUPIhNErNcGvUvsO+vXLfUqyhNlORvKSMPce6y+zM6UVx+nJ/rBTH8Q0HX1mOHKgQ86onrDK3mu4w==
+nagu-triples@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.npmjs.org/nagu-triples/-/nagu-triples-2.0.5.tgz"
+  integrity sha512-QMxTwLji7d3TLc4lx/iyLUmeGc+NlGXleeYiASsG0zfBPvT8nosPvyjbPh6Z7zuHQvLaAPsxwG5g1MqO+xXATg==
   dependencies:
     chalk "^5.3.0"
     commander "^12.0.0"

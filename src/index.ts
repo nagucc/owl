@@ -8,56 +8,24 @@
 import triples from 'nagu-triples';
 import { Notion } from 'nagu-triples/dist/notions';
 import { Triple } from 'nagu-triples/dist/triples';
-
-const rdfPrefix = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-export const rdf = {
-  type: `${rdfPrefix}type`,
-  Property: `${rdfPrefix}Property`,
-  Statement: `${rdfPrefix}Statement`,
-  subject: `${rdfPrefix}subject`,
-  predicate: `${rdfPrefix}predicate`,
-  object: `${rdfPrefix}object`,
-  Bag: `${rdfPrefix}Bag`,
-  Seq: `${rdfPrefix}Seq`,
-  Alt: `${rdfPrefix}Alt`,
-  value: `${rdfPrefix}value`,
-  List: `${rdfPrefix}List`,
-  nil: `${rdfPrefix}nil`,
-  first: `${rdfPrefix}first`,
-  rest: `${rdfPrefix}rest`,
-  XMLLiteral: `${rdfPrefix}XMLLiteral`,
-  JSON: `${rdfPrefix}JSON`,
-  CompoundLiteral: `${rdfPrefix}CompoundLiteral`,
-  language: `${rdfPrefix}language`,
-  direction: `${rdfPrefix}direction`,
-}
-
-const rdfsPrefix = 'http://www.w3.org/2000/01/rdf-schema#';
-export const rdfs = {
-  subClassOf: `${rdfsPrefix}subClassOf`,
-  subPropertyOf: `${rdfsPrefix}subPropertyOf`,
-  Literal: `${rdfsPrefix}Literal`,
-  Class: `${rdfsPrefix}Class`,
-  Resource: `${rdfsPrefix}Resource`,
-  Container: `${rdfsPrefix}Container`,
-  Datatype: `${rdfsPrefix}Datatype`,
-  seeAlso: `${rdfsPrefix}seeAlso`,
-  label: `${rdfsPrefix}label`,
-  comment: `${rdfsPrefix}comment`,
-  domain: `${rdfsPrefix}domain`,
-  range: `${rdfsPrefix}range`,
-  member: `${rdfsPrefix}member`,
-}
+import { rdf, rdfs } from './constants';
+import { IAnnotations } from './index.d';
 
 export interface IRdfsClass {
   instances(): Promise<Array<RdfsResource>>;
 }
+
 export class Factory {
   options: any;
   constructor(options) {
     this.options = options;
   }
   async createRdfResource (uri: Notion<string>|string, forceInit: boolean = true) {
+    const res = new RdfsResource(uri, this.options);
+    if (forceInit) await res.init();
+    return res;
+  }
+  async createRdfsResource (uri: Notion<string>|string, forceInit: boolean = true) {
     const res = new RdfsResource(uri, this.options);
     if (forceInit) await res.init();
     return res;
@@ -156,16 +124,48 @@ export class Factory {
  * RDF Resource, rdf:Resource 表示RDF中被描述的资源
  * - 应专注于对"属性"的管理，而非属性值(当下最重要的是实现功能！！)
  */
-export class RdfsResource extends Notion<string> {
+export class RdfsResource extends Notion<string> implements IAnnotations {
   public uri: string;
-  options: any;
   properties: any[];
-  constructor (public iri: Notion<string>|string, options) {
+  constructor (public iri: Notion<string>|string, protected options: any) {
     super(iri.toString());
     this.iri = iri;
     this.uri = iri.toString();
     this.options = options;
     this.properties = [];
+  }
+
+  label: string|Notion<string>;
+  comment: string|Notion<string>;
+  seeAlso: string|Notion<string>;
+  async setAnnotations({ label, comment, seeAlso }): Promise<void> {
+    const operations = [];
+
+    // 删除原值
+    if (this.label) operations.push(this.removePropertyValue(rdfs.label, this.label));
+    if (this.comment) operations.push(this.removePropertyValue(rdfs.comment, this.comment));
+    if (this.seeAlso) operations.push(this.removePropertyValue(rdfs.seeAlso, this.seeAlso));
+    
+    // 设置新值
+    const setOps = []
+    if (label) setOps.push(this.setPropertyValue(rdfs.label, label));
+    if (comment) setOps.push(this.setPropertyValue(rdfs.comment, comment));
+    if (seeAlso) setOps.push(this.setPropertyValue(rdfs.seeAlso, seeAlso));
+    const ts = await Promise.all(setOps);
+
+    // 修改自身变量
+    this.label = ts[0].object;
+    this.comment = ts[1].object;
+    this.seeAlso = ts[2].object;
+  }
+  async getAnnotations(): Promise<IAnnotations> {
+    const [labels, comments, seeAlsos] = await Promise.all([
+      rdfs.label, rdfs.comment, rdfs.seeAlso,
+    ].map(p => this.getPropertyValues(p)));
+    this.label = (labels || [])[0]?.toString() || '';
+    this.comment = (comments || [])[0]?.toString() || '';
+    this.seeAlso = (seeAlsos || [])[0]?.toString() || '';
+    return this;
   }
   
   async getPropertyValues(property: RdfProperty | string): Promise<Array<RdfsResource>> {
@@ -230,8 +230,9 @@ export class RdfsResource extends Notion<string> {
 }
 
 export class RdfsClass extends RdfsResource implements IRdfsClass {
-  instances(): Promise<RdfsResource[]> {
-    throw new Error('Method not implemented.');
+  async instances(): Promise<RdfsResource[]> {
+    const result = await triples.listByPO(rdf.type, this.iri, this.options);
+    return result.map(t => new RdfsResource(t.subject, this.options));
   }
   async init() {
     await this.setPropertyValue(rdf.type, rdfs.Class);
