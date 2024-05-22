@@ -1,6 +1,6 @@
 {
   "name": "nagu-owl",
-  "version": "1.9.1",
+  "version": "1.11.0",
   "description": "[![Node.js CI](https://github.com/nagucc/owl/actions/workflows/node.js.yml/badge.svg)](https://github.com/nagucc/owl/actions/workflows/node.js.yml)",
   "type": "module",
   "main": "dist/index.js",
@@ -13,7 +13,7 @@
     "prettier": "npx prettier --check src",
     "prettier:fix": "npm run prettier -- --write",
     "format": "npm run prettier:fix && npm run lint:fix",
-    "test": "node --test"
+    "test": "mocha -r ts-node/register test/**/*.ts"
   },
   "repository": {
     "type": "git",
@@ -27,13 +27,16 @@
   },
   "homepage": "https://github.com/nagucc/owl#readme",
   "devDependencies": {
+    "@types/assert": "^1.5.10",
     "@types/mocha": "^10.0.6",
+    "assert": "^2.1.0",
     "eslint": "^7.32.0 || ^8.2.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.25.2",
     "jsdoc": "^4.0.2",
     "nodemon": "^3.0.1",
     "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
     "typedoc": "^0.25.11"
   },
   "dependencies": {
@@ -41,7 +44,9 @@
     "commander": "^12.0.0",
     "figlet": "^1.7.0",
     "inquirer": "^9.2.15",
+    "nagu-owl-types": "^1.1.0",
     "nagu-triples": "^2.0.5",
+    "nagu-triples-types": "^1.0.2",
     "ora": "^8.0.1"
   },
   "directories": {

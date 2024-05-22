@@ -36,4 +36,5 @@ export const rdfs = {
   domain: `${rdfsPrefix}domain`,
   range: `${rdfsPrefix}range`,
   member: `${rdfsPrefix}member`,
+  isDefinedBy: `${rdfsPrefix}isDefinedBy`,
 }

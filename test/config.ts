@@ -1,8 +1,10 @@
+import env from 'node:process'
+
 export const options = {
-  host: '192.168.0.231',
+  host: '10.10.1.2',
   database: 'owl',
   user: 'owl',
-  password: '',
+  password: 'j',
 };
 
 export default {

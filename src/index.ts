@@ -7,35 +7,31 @@
 
 import triples from 'nagu-triples';
 import { Notion } from 'nagu-triples/dist/notions';
-import { Triple } from 'nagu-triples/dist/triples';
 import { rdf, rdfs } from './constants';
-import { IAnnotations } from './index.d';
-
-export interface IRdfsClass {
-  instances(): Promise<Array<RdfsResource>>;
-}
+import { INotion, ITriple } from 'nagu-triples-types';
+import { IAnnotations, IRdfProperty, IRdfsClass, IRdfsResource } from 'nagu-owl-types';
 
 export class Factory {
   options: any;
   constructor(options) {
     this.options = options;
   }
-  async createRdfResource (uri: Notion<string>|string, forceInit: boolean = true) {
+  async createRdfResource (uri: INotion<string>|string, forceInit: boolean = true) {
     const res = new RdfsResource(uri, this.options);
     if (forceInit) await res.init();
     return res;
   }
-  async createRdfsResource (uri: Notion<string>|string, forceInit: boolean = true) {
+  async createRdfsResource (uri: INotion<string>|string, forceInit: boolean = true) {
     const res = new RdfsResource(uri, this.options);
     if (forceInit) await res.init();
     return res;
   }
-  async createRdfProperty (uri: Notion<string>|string, forceInit: boolean = true) {
+  async createRdfProperty (uri: INotion<string>|string, forceInit: boolean = true) {
     const res = new RdfProperty(uri, this.options);
     if (forceInit) await res.init();
     return res;
   }
-  async createRdfsClass(uri: Notion<string>|string, forceInit: boolean = true) {
+  async createRdfsClass(uri: INotion<string>|string, forceInit: boolean = true) {
     const res = new RdfsClass(uri, this.options);
     if (forceInit) await res.init();
     return res;
@@ -124,7 +120,7 @@ export class Factory {
  * RDF Resource, rdf:Resource 表示RDF中被描述的资源
  * - 应专注于对"属性"的管理，而非属性值(当下最重要的是实现功能！！)
  */
-export class RdfsResource extends Notion<string> implements IAnnotations {
+export class RdfsResource extends Notion<string> implements IRdfsResource {
   public uri: string;
   properties: any[];
   constructor (public iri: Notion<string>|string, protected options: any) {
@@ -137,50 +133,58 @@ export class RdfsResource extends Notion<string> implements IAnnotations {
 
   label: string|Notion<string>;
   comment: string|Notion<string>;
+  isDefinedBy: string|Notion<string>;
   seeAlso: string|Notion<string>;
-  async setAnnotations({ label, comment, seeAlso }): Promise<void> {
+  /**
+   * 删除原值后添加新值
+   */
+  async setAnnotations({ label, comment, isDefinedBy, seeAlso }): Promise<void> {
     const operations = [];
-
     // 删除原值
     if (this.label) operations.push(this.removePropertyValue(rdfs.label, this.label));
     if (this.comment) operations.push(this.removePropertyValue(rdfs.comment, this.comment));
+    if (this.isDefinedBy) operations.push(this.removePropertyValue(rdfs.isDefinedBy, this.isDefinedBy));
     if (this.seeAlso) operations.push(this.removePropertyValue(rdfs.seeAlso, this.seeAlso));
-    
+    await Promise.all(operations);
+
     // 设置新值
     const setOps = []
     if (label) setOps.push(this.setPropertyValue(rdfs.label, label));
     if (comment) setOps.push(this.setPropertyValue(rdfs.comment, comment));
+    if (isDefinedBy) setOps.push(this.setPropertyValue(rdfs.isDefinedBy, isDefinedBy));
     if (seeAlso) setOps.push(this.setPropertyValue(rdfs.seeAlso, seeAlso));
     const ts = await Promise.all(setOps);
 
     // 修改自身变量
-    this.label = ts[0].object;
-    this.comment = ts[1].object;
-    this.seeAlso = ts[2].object;
+    this.label = ts[0]?.object;
+    this.comment = ts[1]?.object;
+    this.isDefinedBy = ts[2]?.object;
+    this.seeAlso = ts[3]?.object;
   }
   async getAnnotations(): Promise<IAnnotations> {
-    const [labels, comments, seeAlsos] = await Promise.all([
-      rdfs.label, rdfs.comment, rdfs.seeAlso,
+    const [labels, comments, isDefinedBy, seeAlsos] = await Promise.all([
+      rdfs.label, rdfs.comment, rdfs.isDefinedBy, rdfs.seeAlso,
     ].map(p => this.getPropertyValues(p)));
     this.label = (labels || [])[0]?.toString() || '';
     this.comment = (comments || [])[0]?.toString() || '';
+    this.isDefinedBy = (isDefinedBy || [])[0]?.toString() || '';
     this.seeAlso = (seeAlsos || [])[0]?.toString() || '';
     return this;
   }
   
-  async getPropertyValues(property: RdfProperty | string): Promise<Array<RdfsResource>> {
+  async getPropertyValues(property: IRdfProperty | string): Promise<Array<IRdfsResource>> {
     // 获取指定属性的所有值
-    if (!(property instanceof RdfProperty)) property = new RdfProperty(property, this.options);
+    if (!(property instanceof RdfProperty)) property = new RdfProperty(property.toString(), this.options);
     // 1. 判断给定property是不是属性
     if (!(await property.check())) throw new Error(`${property}违反 RDF axioms 2, 无法获取值`);
 
     // 2. 获取所有值
-    const result = (await triples.listBySP(this.iri, property, this.options)).map(s => new RdfsResource(s.object.name, this.options));
+    const result = (await triples.listBySP(this.iri, property.toString(), this.options)).map(s => new RdfsResource(s.object.name, this.options));
     this.properties[property.toString()] = result;
     return result;
   }
 
-  async setPropertyValue(property: RdfProperty|string, value: string | Notion<any>): Promise<Triple> {
+  async setPropertyValue(property: RdfProperty|string, value: string | INotion<any>): Promise<ITriple> {
     if (!(property instanceof RdfProperty)) property = new RdfProperty(property, this.options);
     // 1. 检查property
     if (!(await property.check())) throw new Error(`${property} 不是 rdf:Property, 不能设置属性值`);
@@ -235,10 +239,12 @@ export class RdfsClass extends RdfsResource implements IRdfsClass {
     return result.map(t => new RdfsResource(t.subject, this.options));
   }
   async init() {
-    await this.setPropertyValue(rdf.type, rdfs.Class);
+    await super.init();
+    await this.addType(rdfs.Class);
   }
   async destroy() {
-    await this.removePropertyValue(rdf.type, rdfs.Class);
+    await this.removeType(rdfs.Class);
+    return super.destroy();
   }
 }
 
@@ -269,11 +275,13 @@ export class RdfProperty extends RdfsResource implements IRdfsClass {
     return this.removePropertyValue(rdfs.range, resource);
   }
   async init() {
+    await super.init();
     // RDF axioms 2. 设置rdf:type 为rdf:Property
-    await this.setPropertyValue(rdf.type, rdf.Property);
+    await this.addType(rdf.Property);
   }
   async destroy () {
-    await this.removePropertyValue(rdf.type, rdf.Property);
+    await this.removeType(rdf.Property);
+    return super.destroy();
   }
   // 检查当前对象是否是Property
   async check(): Promise<boolean> {

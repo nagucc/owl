@@ -1,13 +1,13 @@
 import assert from 'assert';
 import triples from 'nagu-triples';
-import { Factory, RDF } from '../src/index.js';
+import { Factory, RDF, RdfsResource } from '../src/index.js';
 import { options } from './config.js';
 
 
 const factory = new Factory(options);
 const exmapleResource = `http://owl.ynu.edu.cn/Example#Resource`;
 
-let resource;
+let resource: RdfsResource;
 
 describe('RdfsResouce 类', () => {
   before(async () => {
@@ -49,6 +49,15 @@ describe('RdfsResouce 类', () => {
     await resource.removeType(exmapleResource);
     const types = await resource.types();
     assert.equal(types.length, 0);
+  });
+  it('公共属性 set/get Annotations - 正常', async () => {
+    await resource.setAnnotations({
+      label: 'label',
+      comment: 'comment',
+      seeAlso: 'seeAlso',
+    });
+    assert.strictEqual(resource.label, 'label');
+    assert.strictEqual(resource.comment, 'comment');
   });
   
   it('转换为字符串时为uri', () => {
