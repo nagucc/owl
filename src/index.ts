@@ -9,17 +9,12 @@ import triples from 'nagu-triples';
 import { Notion } from 'nagu-triples/dist/notions';
 import { rdf, rdfs } from './constants';
 import { INotion, ITriple } from 'nagu-triples-types';
-import { IAnnotations, IRdfProperty, IRdfsClass, IRdfsResource } from 'nagu-owl-types';
+import { AnnotationProps, IRdfProperty, IRdfsClass, IRdfsResource } from 'nagu-owl-types';
 
 export class Factory {
   options: any;
   constructor(options) {
     this.options = options;
-  }
-  async createRdfResource (uri: INotion<string>|string, forceInit: boolean = true) {
-    const res = new RdfsResource(uri, this.options);
-    if (forceInit) await res.init();
-    return res;
   }
   async createRdfsResource (uri: INotion<string>|string, forceInit: boolean = true) {
     const res = new RdfsResource(uri, this.options);
@@ -133,42 +128,54 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
 
   label: string|Notion<string>;
   comment: string|Notion<string>;
-  isDefinedBy: string|Notion<string>;
+  isDefinedBy: string|Notion<string>|IRdfsResource;
   seeAlso: string|Notion<string>;
   /**
    * 删除原值后添加新值
    */
-  async setAnnotations({ label, comment, isDefinedBy, seeAlso }): Promise<void> {
+  async setAnnotations(annotations: AnnotationProps): Promise<void> {
+    const { label, comment, isDefinedBy, seeAlso } = annotations;
     const operations = [];
     // 删除原值
     if (this.label) operations.push(this.removePropertyValue(rdfs.label, this.label));
     if (this.comment) operations.push(this.removePropertyValue(rdfs.comment, this.comment));
-    if (this.isDefinedBy) operations.push(this.removePropertyValue(rdfs.isDefinedBy, this.isDefinedBy));
+    if (this.isDefinedBy) operations.push(this.removePropertyValue(rdfs.isDefinedBy, this.isDefinedBy as INotion<string>));
     if (this.seeAlso) operations.push(this.removePropertyValue(rdfs.seeAlso, this.seeAlso));
     await Promise.all(operations);
 
     // 设置新值
-    const setOps = []
-    if (label) setOps.push(this.setPropertyValue(rdfs.label, label));
-    if (comment) setOps.push(this.setPropertyValue(rdfs.comment, comment));
-    if (isDefinedBy) setOps.push(this.setPropertyValue(rdfs.isDefinedBy, isDefinedBy));
-    if (seeAlso) setOps.push(this.setPropertyValue(rdfs.seeAlso, seeAlso));
-    const ts = await Promise.all(setOps);
+    const ts = await Promise.all([
+      this.setPropertyValue(rdfs.label, label),
+      this.setPropertyValue(rdfs.comment, comment),
+      this.setPropertyValue(rdfs.isDefinedBy, isDefinedBy as INotion<string>),
+      this.setPropertyValue(rdfs.seeAlso, seeAlso),
+    ]);
 
     // 修改自身变量
     this.label = ts[0]?.object;
     this.comment = ts[1]?.object;
-    this.isDefinedBy = ts[2]?.object;
     this.seeAlso = ts[3]?.object;
+
+    // 设置isDefinedBy字段
+    const isDefinedByResource = new RdfsResource(ts[2]?.object, this.options);
+    await isDefinedByResource.getAnnotations();
+    this.isDefinedBy = isDefinedByResource;
   }
-  async getAnnotations(): Promise<IAnnotations> {
-    const [labels, comments, isDefinedBy, seeAlsos] = await Promise.all([
+  async getAnnotations(): Promise<AnnotationProps> {
+    const [labels, comments, isDefinedBys, seeAlsos] = await Promise.all([
       rdfs.label, rdfs.comment, rdfs.isDefinedBy, rdfs.seeAlso,
     ].map(p => this.getPropertyValues(p)));
     this.label = (labels || [])[0]?.toString() || '';
     this.comment = (comments || [])[0]?.toString() || '';
-    this.isDefinedBy = (isDefinedBy || [])[0]?.toString() || '';
     this.seeAlso = (seeAlsos || [])[0]?.toString() || '';
+
+    // 设置isDefinedBy字段
+    const isDefinedByIRI = (isDefinedBys || [])[0]?.toString() || '';
+    if (isDefinedByIRI) {
+      const isDefinedByResource = new RdfsResource(isDefinedByIRI, this.options);
+      await isDefinedByResource.getAnnotations();
+      this.isDefinedBy = isDefinedByResource;
+    }
     return this;
   }
   
