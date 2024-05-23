@@ -9,7 +9,7 @@ import triples from 'nagu-triples';
 import { Notion } from 'nagu-triples/dist/notions';
 import { rdf, rdfs } from './constants';
 import { INotion, ITriple } from 'nagu-triples-types';
-import { AnnotationProps, IRdfProperty, IRdfsClass, IRdfsResource } from 'nagu-owl-types';
+import { AnnotationProps, IRdfProperty, IRdfsClass, IRdfsResource, RdfsResourceProps } from 'nagu-owl-types';
 
 export class Factory {
   options: any;
@@ -128,7 +128,7 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
 
   label: string|Notion<string>;
   comment: string|Notion<string>;
-  isDefinedBy: string|Notion<string>|IRdfsResource;
+  isDefinedBy: string|Notion<string>|IRdfsResource|RdfsResourceProps & AnnotationProps;
   seeAlso: string|Notion<string>;
   /**
    * 删除原值后添加新值
@@ -161,7 +161,7 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
     await isDefinedByResource.getAnnotations();
     this.isDefinedBy = isDefinedByResource;
   }
-  async getAnnotations(): Promise<AnnotationProps> {
+  async getAnnotations(): Promise<AnnotationProps & RdfsResourceProps> {
     const [labels, comments, isDefinedBys, seeAlsos] = await Promise.all([
       rdfs.label, rdfs.comment, rdfs.isDefinedBy, rdfs.seeAlso,
     ].map(p => this.getPropertyValues(p)));
@@ -173,10 +173,15 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
     const isDefinedByIRI = (isDefinedBys || [])[0]?.toString() || '';
     if (isDefinedByIRI) {
       const isDefinedByResource = new RdfsResource(isDefinedByIRI, this.options);
-      await isDefinedByResource.getAnnotations();
-      this.isDefinedBy = isDefinedByResource;
+      this.isDefinedBy = await isDefinedByResource.getAnnotations();;
     }
-    return this;
+    return {
+      iri: this.iri,
+      label: this.label,
+      comment: this.comment,
+      isDefinedBy: this.isDefinedBy,
+      seeAlso: this.seeAlso,
+    }
   }
   
   async getPropertyValues(property: IRdfProperty | string): Promise<Array<IRdfsResource>> {
