@@ -1,6 +1,6 @@
 {
   "name": "nagu-owl",
-  "version": "1.11.5",
+  "version": "1.11.6",
   "description": "[![Node.js CI](https://github.com/nagucc/owl/actions/workflows/node.js.yml/badge.svg)](https://github.com/nagucc/owl/actions/workflows/node.js.yml)",
   "type": "module",
   "main": "dist/index.js",
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "nagu-owl-types": "^1.4.1",
-    "nagu-triples": "^2.0.5",
+    "nagu-triples": "^2.1.0",
     "nagu-triples-types": "^1.0.2"
   },
   "directories": {
