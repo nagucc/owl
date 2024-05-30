@@ -145,10 +145,10 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
 
     // 设置新值
     const setOperations = [];
-    if (label) setOperations.push(this.setPropertyValue(rdfs.label, label));
-    if (comment) setOperations.push(this.setPropertyValue(rdfs.comment, comment));
-    if (isDefinedBy) setOperations.push(this.setPropertyValue(rdfs.isDefinedBy, isDefinedBy.toString()));
-    if (seeAlso) setOperations.push(this.setPropertyValue(rdfs.seeAlso, seeAlso));
+    setOperations.push(label ? this.setPropertyValue(rdfs.label, label) : {});
+    setOperations.push(comment ? this.setPropertyValue(rdfs.comment, comment) : {});
+    setOperations.push(isDefinedBy ? this.setPropertyValue(rdfs.isDefinedBy, isDefinedBy.toString()) : {});
+    setOperations.push(seeAlso ? this.setPropertyValue(rdfs.seeAlso, seeAlso) : {});
     
     const ts = await Promise.all(setOperations);
 
