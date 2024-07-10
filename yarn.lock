@@ -1632,10 +1632,10 @@ mysql2@^3.9.7:
     seq-queue "^0.0.5"
     sqlstring "^2.3.2"
 
-nagu-owl-types@^1.4.1:
-  version "1.4.1"
-  resolved "https://registry.npmjs.org/nagu-owl-types/-/nagu-owl-types-1.4.1.tgz"
-  integrity sha512-B7V/0anFKgd8OWAtkCuf5/xhtJ8DYP4O+DhYOQrn6KSt56SdBa4LtI1GoPVJ4gjBgnffl9pcpRiJbP1kg21nAg==
+nagu-owl-types@^1.4.2:
+  version "1.4.2"
+  resolved "https://registry.npmjs.org/nagu-owl-types/-/nagu-owl-types-1.4.2.tgz"
+  integrity sha512-AVh0Tb9fNNMfYdiw+/3sVeW5potFZrcR2ZV+gUToFACd1Ozm0HqCkUcBJD2hLarz3POs+AT4n1q1JSLKYwqs8Q==
   dependencies:
     nagu-triples-types "^1.0.2"
 

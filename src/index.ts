@@ -71,7 +71,7 @@ export class Factory {
       return res.init();
     }));
   }
-  async destory() {
+  async destroy() {
     // 3. 基本Property定义
     await Promise.all([
       rdfs.label,
@@ -158,9 +158,11 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
     this.seeAlso = ts[3]?.object;
 
     // 设置isDefinedBy字段
-    const isDefinedByResource = new RdfsResource(ts[2]?.object, this.options);
-    await isDefinedByResource.getAnnotations();
-    this.isDefinedBy = isDefinedByResource;
+    if (ts[2]?.object) {
+      const isDefinedByResource = new RdfsResource(ts[2]?.object, this.options);
+      await isDefinedByResource.getAnnotations();
+      this.isDefinedBy = isDefinedByResource;
+    }
   }
   async getAnnotations(): Promise<AnnotationProps & RdfsResourceProps> {
     const [labels, comments, isDefinedBys, seeAlsos] = await Promise.all([
@@ -238,7 +240,8 @@ export class RdfsResource extends Notion<string> implements IRdfsResource {
   }
 
   async destroy () {
-    // 在数据库清楚Resource，包括它的公理、定义
+    // 在数据库清除Resource，包括它的公理、定义
+    return 0;
   }
 
   toString () {
@@ -256,8 +259,10 @@ export class RdfsClass extends RdfsResource implements IRdfsClass {
     await this.addType(rdfs.Class);
   }
   async destroy() {
-    await this.removeType(rdfs.Class);
-    return super.destroy();
+    const rows = await this.removeType(rdfs.Class).catch(() => 0);
+    if (!rows) return 0;
+    const superRows = await super.destroy().catch(() => 0);
+    return rows + superRows;
   }
 }
 
@@ -293,8 +298,10 @@ export class RdfProperty extends RdfsResource implements IRdfsClass {
     await this.addType(rdf.Property);
   }
   async destroy () {
-    await this.removeType(rdf.Property);
-    return super.destroy();
+    const rows = await this.removeType(rdf.Property).catch(e => 0);
+    if (!rows) return 0;
+    const superRows = await super.destroy().catch(e => 0);
+    return rows + superRows;
   }
   // 检查当前对象是否是Property
   async check(): Promise<boolean> {
